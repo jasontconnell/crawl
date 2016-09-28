@@ -1,0 +1,10 @@
+{
+    "root": "http://qa.ai.mydelphic.com",
+    "headers": {
+        "Authorization": "Basic ZGVscGhpYzpkaWdpdGFs"
+    },
+    "virtualPaths": [
+        
+    ],
+    "errorFile": "errors.txt"
+}
