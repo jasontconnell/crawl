@@ -25,6 +25,8 @@ type Site struct {
     Headers Headers             `json:"headers"`
     ErrorFileName string            `json:"errorFile"`
     ErrorFile *os.File
+    AllUrlsFileName string      `json:"allUrlsFile"`
+    AllUrlsFile *os.File
 }
 
 type Link struct {
@@ -90,6 +92,11 @@ func main(){
         site.ErrorFile.Chmod(os.ModeAppend)
         site.ErrorFile.WriteString("Url, Referrer, Code\n")
 
+        site.AllUrlsFile,_ = os.Create(site.AllUrlsFileName)
+        site.AllUrlsFile.Chmod(os.ModeAppend)
+        site.AllUrlsFile.WriteString("Url, Referrer\n")
+        site.AllUrlsFile.WriteString(site.Root + ",[Root]\n")
+
 
         if jserr == nil {
             urls := getStartUrlList(site)
@@ -99,8 +106,10 @@ func main(){
             cherrs := make(chan ContentResponse, 300)
             errCount := 0
             finished := make(chan bool)
-               
-            go process(site, churl, chcresp, chproc, cherrs, &errCount, finished)
+            
+            for i := 0; i < 8; i++ {
+                go process(site, churl, chcresp, chproc, cherrs, &errCount, finished)
+            }
          
             for _,url := range urls {
                 gatheredUrls[url] = url
@@ -113,7 +122,7 @@ func main(){
         }
     }
     
-    fmt.Println("done. time", time.Since(startTime))
+    fmt.Println("\n\ndone. time", time.Since(startTime))
 }
 
 func getStartUrlList(site Site) (list []string) {
@@ -130,20 +139,23 @@ func process(site Site, urls chan Link, content, processed, errors chan ContentR
         select {
         case url := <-urls:
             
-            fmt.Printf("\rUrl queue: %d. Content queue: %d. Processed: %d. Errors: %d\t", len(urls), len(content), len(processed), *errCount)
+            fmt.Printf("\rRoot: %v  Url queue: %d. Content queue: %d. Processed: %d. Errors: %d\t", site.Root, len(urls), len(content), len(processed), *errCount)
             ch := getUrlContents(site, url)
             content <- <-ch
 
         case cresp := <-content:
             processed <- cresp
-            fmt.Printf("\rUrl queue: %d. Content queue: %d. Processed: %d. Errors: %d\t", len(urls), len(content), len(processed), *errCount)
+            fmt.Printf("\rRoot: %v  Url queue: %d. Content queue: %d. Processed: %d. Errors: %d\t", site.Root, len(urls), len(content), len(processed), *errCount)
 
             if cresp.Code == 200 {
                 hrefs := Parse(site, cresp.Link.Url, cresp.Content)
                 for href := range hrefs {
                     urls <- href
+                    // unique urls.
+                    site.AllUrlsFile.WriteString(href.Url + "," + href.Referrer + "\n")
+
                 }
-            } else {
+            } else if cresp.Code >= 400 {
                 errors <- cresp
             }
 

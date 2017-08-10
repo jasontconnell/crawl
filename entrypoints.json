@@ -1,10 +1,8 @@
 {
-    "root": "http://qa.ai.mydelphic.com",
-    "headers": {
-        "Authorization": "Basic ZGVscGhpYzpkaWdpdGFs"
-    },
+    "root": "http://b.tour.artinstitutes.edu",
     "virtualPaths": [
         
     ],
-    "errorFile": "errors.txt"
+    "errorFile": "errors.txt",
+    "allUrlsFile": "urls.txt"
 }
