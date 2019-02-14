@@ -106,9 +106,9 @@ func main() {
 
 	gatheredUrls := sync.Map{}
 	urls := getStartUrlList(site)
-	churl := make(chan Link, 15000)
+	churl := make(chan Link, 1500000)
 	chcresp := make(chan ContentResponse, 300)
-	chproc := make(chan ContentResponse, 15000)
+	chproc := make(chan ContentResponse, 1500000)
 	cherrs := make(chan ContentResponse, 300)
 	errCount := 0
 	finished := make(chan bool)
