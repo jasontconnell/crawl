@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -15,7 +16,6 @@ import (
 )
 
 var hrefRegex *regexp.Regexp = regexp.MustCompile(`(href|src)="(.*?)"`)
-var gatheredUrls map[string]string = make(map[string]string)
 
 type Headers map[string]string
 
@@ -40,7 +40,7 @@ type ContentResponse struct {
 	Content string
 }
 
-func Parse(site Site, referrer, content string) (urls chan Link) {
+func Parse(site Site, referrer, content string, gatheredUrls sync.Map) (urls chan Link) {
 	var wg sync.WaitGroup
 	wg.Add(1)
 	urls = make(chan Link)
@@ -57,13 +57,13 @@ func Parse(site Site, referrer, content string) (urls chan Link) {
 				href = site.Root + href
 			}
 
-			_, contains := gatheredUrls[href]
-			_, contains2 := gatheredUrls[href+"/"]
-			_, contains3 := gatheredUrls[strings.TrimSuffix(href, "/")]
+			_, contains := gatheredUrls.Load(href)
+			_, contains2 := gatheredUrls.Load(href + "/")
+			_, contains3 := gatheredUrls.Load(strings.TrimSuffix(href, "/"))
 			contains = contains || contains2 || contains3
 
 			if !contains {
-				gatheredUrls[href] = href
+				gatheredUrls.Store(href, href)
 			}
 
 			if add && !contains {
@@ -82,44 +82,47 @@ func init() {
 func main() {
 	startTime := time.Now()
 
-	if file, err := os.OpenFile("entrypoints.json", os.O_RDONLY, os.ModePerm); err == nil {
-		enc := json.NewDecoder(file)
-
-		var site Site
-		jserr := enc.Decode(&site)
-
-		site.ErrorFile, _ = os.Create(site.ErrorFileName)
-		site.ErrorFile.Chmod(os.ModeAppend)
-		site.ErrorFile.WriteString("Url, Referrer, Code\n")
-
-		site.AllUrlsFile, _ = os.Create(site.AllUrlsFileName)
-		site.AllUrlsFile.Chmod(os.ModeAppend)
-		site.AllUrlsFile.WriteString("Url, Referrer\n")
-		site.AllUrlsFile.WriteString(site.Root + ",[Root]\n")
-
-		if jserr == nil {
-			urls := getStartUrlList(site)
-			churl := make(chan Link, 15000)
-			chcresp := make(chan ContentResponse, 300)
-			chproc := make(chan ContentResponse, 15000)
-			cherrs := make(chan ContentResponse, 300)
-			errCount := 0
-			finished := make(chan bool)
-
-			for i := 0; i < 8; i++ {
-				go process(site, churl, chcresp, chproc, cherrs, &errCount, finished)
-			}
-
-			for _, url := range urls {
-				gatheredUrls[url] = url
-				churl <- Link{Referrer: site.Root, Url: url}
-			}
-
-			<-finished
-		} else {
-			fmt.Println(jserr)
-		}
+	file, err := os.Open("entrypoints.json")
+	if err != nil {
+		log.Fatal(err)
 	}
+
+	enc := json.NewDecoder(file)
+
+	var site Site
+	jserr := enc.Decode(&site)
+	if jserr != nil {
+		log.Fatal(jserr)
+	}
+
+	site.ErrorFile, _ = os.Create(site.ErrorFileName)
+	site.ErrorFile.Chmod(os.ModeAppend)
+	site.ErrorFile.WriteString("Url, Referrer, Code\n")
+
+	site.AllUrlsFile, _ = os.Create(site.AllUrlsFileName)
+	site.AllUrlsFile.Chmod(os.ModeAppend)
+	site.AllUrlsFile.WriteString("Url, Referrer\n")
+	site.AllUrlsFile.WriteString(site.Root + ",[Root]\n")
+
+	gatheredUrls := sync.Map{}
+	urls := getStartUrlList(site)
+	churl := make(chan Link, 15000)
+	chcresp := make(chan ContentResponse, 300)
+	chproc := make(chan ContentResponse, 15000)
+	cherrs := make(chan ContentResponse, 300)
+	errCount := 0
+	finished := make(chan bool)
+
+	for i := 0; i < 8; i++ {
+		go process(site, churl, chcresp, chproc, cherrs, &errCount, gatheredUrls, finished)
+	}
+
+	for _, url := range urls {
+		// gatheredUrls[url] = url
+		churl <- Link{Referrer: site.Root, Url: url}
+	}
+
+	<-finished
 
 	fmt.Println("\n\ndone. time", time.Since(startTime))
 }
@@ -133,7 +136,7 @@ func getStartUrlList(site Site) (list []string) {
 	return
 }
 
-func process(site Site, urls chan Link, content, processed, errors chan ContentResponse, errCount *int, finished chan bool) {
+func process(site Site, urls chan Link, content, processed, errors chan ContentResponse, errCount *int, gatheredUrls sync.Map, finished chan bool) {
 	for {
 		select {
 		case url := <-urls:
@@ -147,12 +150,11 @@ func process(site Site, urls chan Link, content, processed, errors chan ContentR
 			fmt.Printf("\rRoot: %v  Url queue: %d. Content queue: %d. Processed: %d. Errors: %d\t", site.Root, len(urls), len(content), len(processed), *errCount)
 
 			if cresp.Code == 200 {
-				hrefs := Parse(site, cresp.Link.Url, cresp.Content)
+				hrefs := Parse(site, cresp.Link.Url, cresp.Content, gatheredUrls)
 				for href := range hrefs {
 					urls <- href
 					// unique urls.
 					site.AllUrlsFile.WriteString(href.Url + "," + href.Referrer + "\n")
-
 				}
 			} else if cresp.Code >= 400 {
 				errors <- cresp
@@ -180,7 +182,7 @@ func getUrlContents(site Site, link Link) (chresp chan ContentResponse) {
 
 		uri, parseErr := url.Parse(link.Url)
 		if parseErr != nil {
-			panic(parseErr)
+			log.Fatal(parseErr)
 		}
 
 		headers := make(map[string][]string)
@@ -199,18 +201,19 @@ func getUrlContents(site Site, link Link) (chresp chan ContentResponse) {
 		}
 
 		resp, err := client.Do(req)
-		defer resp.Body.Close()
-
-		if err == nil {
-			if contents, err := ioutil.ReadAll(resp.Body); err == nil {
-				text := string(contents)
-				chresp <- ContentResponse{Link: link, Code: resp.StatusCode, Content: text}
-			} else {
-				fmt.Println(err)
-			}
-		} else {
-			fmt.Println(err)
+		if err != nil {
+			log.Fatal(err)
 		}
+
+		defer resp.Body.Close()
+		contents, err := ioutil.ReadAll(resp.Body)
+
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		text := string(contents)
+		chresp <- ContentResponse{Link: link, Code: resp.StatusCode, Content: text}
 	}()
 
 	return
