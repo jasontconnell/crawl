@@ -140,11 +140,9 @@ func process(site Site, urls chan Link, content, processed, errors chan ContentR
 	for {
 		select {
 		case url := <-urls:
-
 			fmt.Printf("\rRoot: %v  Url queue: %d. Content queue: %d. Processed: %d. Errors: %d\t", site.Root, len(urls), len(content), len(processed), *errCount)
 			ch := getUrlContents(site, url)
 			content <- <-ch
-
 		case cresp := <-content:
 			processed <- cresp
 			fmt.Printf("\rRoot: %v  Url queue: %d. Content queue: %d. Processed: %d. Errors: %d\t", site.Root, len(urls), len(content), len(processed), *errCount)
