@@ -34,6 +34,7 @@ func main() {
 		log.Fatal("need a url")
 	}
 
+	fmt.Println(cfg)
 	site := data.Site{}
 	site.Root = cfg.Root
 	site.VirtualPaths = cfg.VirtualPaths

@@ -6,6 +6,6 @@
     "headers": {
         "Authorization" : "Basic blah"
     },
-    "errorFile": "errors.txt",
+    "errorsFile": "errors.txt",
     "urlsFile": "urls.txt"
 }
