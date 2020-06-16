@@ -1,8 +1,7 @@
 {
-    "root": "http://www.lpga.com",
+    "root": "https://www.solheimcupusa.com",
     "virtualPaths": [
-        
     ],
     "errorFile": "errors.txt",
-    "allUrlsFile": "urls.txt"
+    "urlsFile": "urls.txt"
 }
