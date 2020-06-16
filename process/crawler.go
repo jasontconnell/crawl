@@ -2,6 +2,7 @@ package process
 
 import (
 	"fmt"
+	"runtime"
 	"strconv"
 	"sync"
 
@@ -37,7 +38,7 @@ func printStatus(job *data.Job) {
 }
 
 func crawl(job *data.Job) {
-	for i := 0; i < 8; i++ {
+	for i := 0; i < runtime.NumCPU(); i++ {
 		go getContent(job)
 		go getLinks(job)
 	}
