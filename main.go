@@ -35,16 +35,27 @@ func main() {
 	}
 
 	site := data.Site{}
-	site.ErrorFile, _ = os.OpenFile(cfg.ErrorsFile, os.O_CREATE|os.O_WRONLY, os.ModePerm)
-	site.ErrorFile.WriteString("Url, Referrer, Code\n")
-
-	site.UrlsFile, _ = os.OpenFile(cfg.UrlsFile, os.O_CREATE|os.O_WRONLY, os.ModePerm)
-	site.UrlsFile.WriteString("Url, Referrer\n")
-	site.UrlsFile.WriteString(site.Root + ",[Root]\n")
-
 	site.Root = cfg.Root
 	site.VirtualPaths = cfg.VirtualPaths
 	site.Headers = make(data.Headers)
+
+	var err error
+	site.ErrorFile, err = os.OpenFile(cfg.ErrorsFile, os.O_CREATE|os.O_WRONLY, os.ModePerm)
+	if err != nil {
+		log.Fatal("couldn't open errors file", cfg.ErrorsFile, err)
+	}
+
+	defer site.ErrorFile.Close()
+	site.ErrorFile.WriteString("Url, Referrer, Code\n")
+
+	site.UrlsFile, err = os.OpenFile(cfg.UrlsFile, os.O_CREATE|os.O_WRONLY, os.ModePerm)
+	if err != nil {
+		log.Fatal("couldn't open urls file", cfg.ErrorsFile, err)
+	}
+
+	defer site.UrlsFile.Close()
+	site.UrlsFile.WriteString("Url, Referrer\n")
+	site.UrlsFile.WriteString(site.Root + ",[Root]\n")
 
 	for k, v := range cfg.Headers {
 		site.Headers[k] = v
