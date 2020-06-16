@@ -1,7 +1,11 @@
 {
-    "root": "https://www.solheimcupusa.com",
+    "root": "https://www.example.com",
     "virtualPaths": [
+        "/app"
     ],
+    "headers": {
+        "Authorization" : "Basic blah"
+    },
     "errorFile": "errors.txt",
     "urlsFile": "urls.txt"
 }
