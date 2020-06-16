@@ -13,8 +13,6 @@ func Start(site data.Site) {
 	urls := getStartUrlList(site)
 	churl := make(chan data.Link, 1500000)
 	chcresp := make(chan data.ContentResponse, 300)
-	//chproc := make(chan data.ContentResponse, 1500000)
-	// cherrs := make(chan data.Error, 300)
 	finished := make(chan bool)
 
 	job := &data.Job{
@@ -31,7 +29,6 @@ func Start(site data.Site) {
 
 	crawl(job)
 
-	fmt.Println("waiting")
 	<-job.Finished
 }
 
@@ -40,20 +37,19 @@ func printStatus(job *data.Job) {
 }
 
 func crawl(job *data.Job) {
-
 	for i := 0; i < 8; i++ {
 		go getContent(job)
 		go getLinks(job)
 	}
 }
 
-func getStartUrlList(site data.Site) (list []string) {
-	list = []string{}
+func getStartUrlList(site data.Site) []string {
+	list := []string{}
 	list = append(list, site.Root)
 	for _, i := range site.VirtualPaths {
 		list = append(list, site.Root+i)
 	}
-	return
+	return list
 }
 
 func checkDone(job *data.Job) {
