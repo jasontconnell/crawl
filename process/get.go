@@ -13,6 +13,8 @@ import (
 	"github.com/pkg/errors"
 )
 
+var TimeoutError error = errors.New("timeout")
+
 func getUrlContents(site *data.Site, link data.Link) (data.ContentResponse, error) {
 	cresp := data.ContentResponse{}
 	uri, err := url.Parse(link.Url)
@@ -40,9 +42,10 @@ func getUrlContents(site *data.Site, link data.Link) (data.ContentResponse, erro
 	if err != nil {
 		if toerr, ok := err.(net.Error); ok && toerr.Timeout() {
 			site.WriteError(link.Url, link.Referrer, -1, "timed out")
-		} else {
-			site.WriteError(link.Url, link.Referrer, -1, err.Error())
+			return cresp, TimeoutError
 		}
+
+		site.WriteError(link.Url, link.Referrer, -1, err.Error())
 		return cresp, fmt.Errorf("requesting %s : %w", uri, err)
 	}
 	defer resp.Body.Close()

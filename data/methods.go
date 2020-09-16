@@ -25,6 +25,7 @@ func NewSite(root string, virtualPaths []string, headers Headers, urlFilename, e
 	site.urlsFile = uf
 
 	site.errorFile.WriteString("Url, Referrer, Code, Details\n")
+	site.urlsFile.WriteString("Url, Referrer\n")
 
 	return site, nil
 }

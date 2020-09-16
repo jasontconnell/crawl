@@ -1,9 +1,11 @@
 package process
 
 import (
+	"errors"
 	"fmt"
 	"runtime"
 	"sync"
+	"time"
 
 	"github.com/jasontconnell/crawl/data"
 )
@@ -11,20 +13,19 @@ import (
 func Start(site *data.Site) {
 	gatheredUrls := sync.Map{}
 	urls := getStartUrlList(site)
-	churl := make(chan data.Link, 1500000)
-	chcresp := make(chan data.ContentResponse, 300)
-	finished := make(chan bool)
 
 	job := &data.Job{
-		Site:     site,
-		Urls:     churl,
-		Content:  chcresp,
-		Gathered: &gatheredUrls,
-		Finished: finished,
+		Site:       site,
+		Urls:       make(chan data.Link, 1500000),
+		Retry:      make(chan data.Link, 150000),
+		Content:    make(chan data.ContentResponse, 300),
+		Gathered:   &gatheredUrls,
+		Finished:   make(chan bool),
+		Processing: true,
 	}
 
 	for _, url := range urls {
-		churl <- data.Link{Url: url, Referrer: site.Root}
+		job.Urls <- data.Link{Url: url, Referrer: site.Root}
 	}
 
 	crawl(job)
@@ -33,7 +34,11 @@ func Start(site *data.Site) {
 }
 
 func printStatus(job *data.Job) {
-	fmt.Printf("\rRoot: %v  Url queue: %d. Content queue: %d. Processed: %d. Errors: %d   \t", job.Site.Root, len(job.Urls), len(job.Content), job.Processed, job.ErrorCount)
+	if !job.Processing {
+		return
+	}
+
+	fmt.Printf("\rRoot: %v  Url queue: %d. Retry queue: %d. Content queue: %d. Processed: %d. Errors: %d   \t", job.Site.Root, len(job.Urls), len(job.Retry), len(job.Content), job.Processed, job.ErrorCount)
 }
 
 func crawl(job *data.Job) {
@@ -53,8 +58,9 @@ func getStartUrlList(site *data.Site) []string {
 }
 
 func checkDone(job *data.Job) {
-	allDone := job.Processed > 0 && len(job.Urls) == 0 && len(job.Content) == 0
+	allDone := job.Processed > 0 && len(job.Urls) == 0 && len(job.Content) == 0 && len(job.Retry) == 0
 	if allDone {
+		job.Processing = false
 		job.Finished <- true
 	}
 }
@@ -63,16 +69,26 @@ func getContent(job *data.Job) {
 	for {
 		select {
 		case url := <-job.Urls:
-			ch, err := getUrlContents(job.Site, url)
-			if err != nil {
-				job.ErrorCount++
-			}
-			job.Content <- ch
-
-			printStatus(job)
-			checkDone(job)
+			doGetUrl(job, url)
+		case url := <-job.Retry:
+			time.Sleep(2 * time.Second)
+			doGetUrl(job, url)
 		}
+
+		printStatus(job)
 	}
+}
+
+func doGetUrl(job *data.Job, url data.Link) {
+	ch, err := getUrlContents(job.Site, url)
+	if err != nil {
+		job.ErrorCount++
+	}
+	if errors.Is(err, TimeoutError) {
+		job.Retry <- url
+	}
+
+	job.Content <- ch
 }
 
 func getLinks(job *data.Job) {

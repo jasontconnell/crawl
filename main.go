@@ -47,8 +47,8 @@ func main() {
 	if err != nil {
 		log.Fatal("error initializing site", err)
 	}
-
 	defer site.CleanUp()
+
 	process.Start(site)
 
 	fmt.Println("\n\ndone. time", time.Since(startTime))

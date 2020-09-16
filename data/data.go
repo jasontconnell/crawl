@@ -30,9 +30,11 @@ type ContentResponse struct {
 type Job struct {
 	Site       *Site
 	Urls       chan Link
+	Retry      chan Link
 	Content    chan ContentResponse
 	Processed  int
 	Finished   chan bool
 	ErrorCount int
 	Gathered   *sync.Map
+	Processing bool
 }
