@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"runtime"
+	"strings"
 	"time"
 
 	"github.com/jasontconnell/crawl/conf"
@@ -25,6 +26,9 @@ func main() {
 	baseUrl := ""
 	if len(os.Args) == 2 {
 		baseUrl = os.Args[1]
+		if strings.Index(baseUrl, "http") == -1 {
+			baseUrl = "https://" + baseUrl
+		}
 	} else if len(os.Args) == 1 {
 		*cfgfile = "entrypoints.json"
 	}
@@ -34,34 +38,17 @@ func main() {
 		log.Fatal("need a url")
 	}
 
-	fmt.Println(cfg)
-	site := data.Site{}
-	site.Root = cfg.Root
-	site.VirtualPaths = cfg.VirtualPaths
-	site.Headers = make(data.Headers)
-
-	var err error
-	site.ErrorFile, err = os.OpenFile(cfg.ErrorsFile, os.O_CREATE|os.O_WRONLY, os.ModePerm)
-	if err != nil {
-		log.Fatal("couldn't open errors file", cfg.ErrorsFile, err)
-	}
-
-	defer site.ErrorFile.Close()
-	site.ErrorFile.WriteString("Url, Referrer, Code\n")
-
-	site.UrlsFile, err = os.OpenFile(cfg.UrlsFile, os.O_CREATE|os.O_WRONLY, os.ModePerm)
-	if err != nil {
-		log.Fatal("couldn't open urls file", cfg.ErrorsFile, err)
-	}
-
-	defer site.UrlsFile.Close()
-	site.UrlsFile.WriteString("Url, Referrer\n")
-	site.UrlsFile.WriteString(site.Root + ",[Root]\n")
-
+	hdr := make(data.Headers)
 	for k, v := range cfg.Headers {
-		site.Headers[k] = v
+		hdr[k] = v
 	}
 
+	site, err := data.NewSite(cfg.Root, cfg.VirtualPaths, hdr, cfg.UrlsFile, cfg.ErrorsFile)
+	if err != nil {
+		log.Fatal("error initializing site", err)
+	}
+
+	defer site.CleanUp()
 	process.Start(site)
 
 	fmt.Println("\n\ndone. time", time.Since(startTime))

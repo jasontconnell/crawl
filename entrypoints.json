@@ -1,11 +1,7 @@
 {
-    "root": "https://www.example.com",
-    "virtualPaths": [
-        "/app"
-    ],
-    "headers": {
-        "Authorization" : "Basic blah"
-    },
+    "root": "http://localhost:3335/",
+    "virtualPaths": [],
+    "headers": {},
     "errorsFile": "errors.txt",
     "urlsFile": "urls.txt"
 }

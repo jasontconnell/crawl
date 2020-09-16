@@ -11,8 +11,8 @@ type Site struct {
 	Root         string
 	VirtualPaths []string
 	Headers      Headers
-	ErrorFile    *os.File
-	UrlsFile     *os.File
+	errorFile    *os.File
+	urlsFile     *os.File
 }
 
 type Link struct {
@@ -24,14 +24,15 @@ type ContentResponse struct {
 	Link    Link
 	Code    int
 	Content string
+	Retry   bool
 }
 
 type Job struct {
-	Site      Site
-	Urls      chan Link
-	Content   chan ContentResponse
-	Processed int
-	Finished  chan bool
-	Errors    int
-	Gathered  sync.Map
+	Site       *Site
+	Urls       chan Link
+	Content    chan ContentResponse
+	Processed  int
+	Finished   chan bool
+	ErrorCount int
+	Gathered   *sync.Map
 }

@@ -3,13 +3,12 @@ package process
 import (
 	"fmt"
 	"runtime"
-	"strconv"
 	"sync"
 
 	"github.com/jasontconnell/crawl/data"
 )
 
-func Start(site data.Site) {
+func Start(site *data.Site) {
 	gatheredUrls := sync.Map{}
 	urls := getStartUrlList(site)
 	churl := make(chan data.Link, 1500000)
@@ -20,7 +19,7 @@ func Start(site data.Site) {
 		Site:     site,
 		Urls:     churl,
 		Content:  chcresp,
-		Gathered: gatheredUrls,
+		Gathered: &gatheredUrls,
 		Finished: finished,
 	}
 
@@ -34,7 +33,7 @@ func Start(site data.Site) {
 }
 
 func printStatus(job *data.Job) {
-	fmt.Printf("\rRoot: %v  Url queue: %d. Content queue: %d. Processed: %d. Errors: %d   \t", job.Site.Root, len(job.Urls), len(job.Content), job.Processed, job.Errors)
+	fmt.Printf("\rRoot: %v  Url queue: %d. Content queue: %d. Processed: %d. Errors: %d   \t", job.Site.Root, len(job.Urls), len(job.Content), job.Processed, job.ErrorCount)
 }
 
 func crawl(job *data.Job) {
@@ -44,7 +43,7 @@ func crawl(job *data.Job) {
 	}
 }
 
-func getStartUrlList(site data.Site) []string {
+func getStartUrlList(site *data.Site) []string {
 	list := []string{}
 	list = append(list, site.Root)
 	for _, i := range site.VirtualPaths {
@@ -54,7 +53,7 @@ func getStartUrlList(site data.Site) []string {
 }
 
 func checkDone(job *data.Job) {
-	allDone := job.Processed > 1 && len(job.Urls) == 0 && len(job.Content) == 0
+	allDone := job.Processed > 0 && len(job.Urls) == 0 && len(job.Content) == 0
 	if allDone {
 		job.Finished <- true
 	}
@@ -66,7 +65,7 @@ func getContent(job *data.Job) {
 		case url := <-job.Urls:
 			ch, err := getUrlContents(job.Site, url)
 			if err != nil {
-				job.Errors++
+				job.ErrorCount++
 			}
 			job.Content <- ch
 
@@ -83,14 +82,14 @@ func getLinks(job *data.Job) {
 			job.Processed++
 
 			if cresp.Code == 200 {
-				hrefs := parse(job.Site, cresp.Link.Url, cresp.Content, &job.Gathered)
+				hrefs := parse(job.Site, cresp.Link.Url, cresp.Content, job.Gathered)
 				for _, href := range hrefs {
 					job.Urls <- href
-					job.Site.UrlsFile.WriteString(href.Url + "," + href.Referrer + "\n")
+					job.Site.WriteUrl(href.Url, href.Referrer)
 				}
 			} else if cresp.Code >= 400 {
-				job.Site.ErrorFile.WriteString(cresp.Link.Url + "," + cresp.Link.Referrer + "," + strconv.Itoa(cresp.Code) + "\n")
-				job.Errors++
+				job.Site.WriteError(cresp.Link.Url, cresp.Link.Referrer, cresp.Code, "400ish error")
+				job.ErrorCount++
 			}
 
 			printStatus(job)

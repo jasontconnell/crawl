@@ -10,7 +10,7 @@ import (
 
 var hrefRegex *regexp.Regexp = regexp.MustCompile(`(href|src)="(.*?)"`)
 
-func parse(site data.Site, referrer, content string, gatheredUrls *sync.Map) []data.Link {
+func parse(site *data.Site, referrer, content string, gatheredUrls *sync.Map) []data.Link {
 	urls := []data.Link{}
 	matches := hrefRegex.FindAllStringSubmatch(content, -1)
 	for _, m := range matches {

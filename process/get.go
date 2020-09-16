@@ -1,16 +1,19 @@
 package process
 
 import (
+	"fmt"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/jasontconnell/crawl/data"
 	"github.com/pkg/errors"
 )
 
-func getUrlContents(site data.Site, link data.Link) (data.ContentResponse, error) {
+func getUrlContents(site *data.Site, link data.Link) (data.ContentResponse, error) {
 	cresp := data.ContentResponse{}
 	uri, err := url.Parse(link.Url)
 	if err != nil {
@@ -30,11 +33,17 @@ func getUrlContents(site data.Site, link data.Link) (data.ContentResponse, error
 			}
 			return http.ErrUseLastResponse
 		},
+		Timeout: time.Duration(time.Second * 5),
 	}
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return cresp, errors.Wrapf(err, "requesting %s", uri)
+		if toerr, ok := err.(net.Error); ok && toerr.Timeout() {
+			site.WriteError(link.Url, link.Referrer, -1, "timed out")
+		} else {
+			site.WriteError(link.Url, link.Referrer, -1, err.Error())
+		}
+		return cresp, fmt.Errorf("requesting %s : %w", uri, err)
 	}
 	defer resp.Body.Close()
 
