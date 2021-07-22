@@ -1,6 +1,7 @@
 package process
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net"
@@ -10,7 +11,6 @@ import (
 	"time"
 
 	"github.com/jasontconnell/crawl/data"
-	"github.com/pkg/errors"
 )
 
 var TimeoutError error = errors.New("timeout")
@@ -19,7 +19,7 @@ func getUrlContents(site *data.Site, link data.Link) (data.ContentResponse, erro
 	cresp := data.ContentResponse{}
 	uri, err := url.Parse(link.Url)
 	if err != nil {
-		return cresp, errors.Wrapf(err, "parsing %s", link.Url)
+		return cresp, fmt.Errorf("parsing %s. %w", link.Url, err)
 	}
 
 	headers := make(map[string][]string)
@@ -30,7 +30,7 @@ func getUrlContents(site *data.Site, link data.Link) (data.ContentResponse, erro
 	req := &http.Request{Method: "GET", URL: uri, Header: headers}
 	client := &http.Client{
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
-			if strings.Contains(site.Root, req.URL.Host) {
+			if strings.Contains(site.Root, req.URL.Hostname()) {
 				return nil
 			}
 			return http.ErrUseLastResponse
@@ -52,7 +52,7 @@ func getUrlContents(site *data.Site, link data.Link) (data.ContentResponse, erro
 
 	contents, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return cresp, errors.Wrapf(err, "reading contents from %s", uri)
+		return cresp, fmt.Errorf("reading contents from %s. %w", uri, err)
 	}
 
 	cresp.Content = string(contents)

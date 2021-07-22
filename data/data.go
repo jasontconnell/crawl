@@ -1,6 +1,7 @@
 package data
 
 import (
+	"net/url"
 	"os"
 	"sync"
 )
@@ -9,6 +10,7 @@ type Headers map[string]string
 
 type Site struct {
 	Root         string
+	RootUrl      *url.URL
 	VirtualPaths []string
 	Headers      Headers
 	errorFile    *os.File

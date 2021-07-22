@@ -1,6 +1,7 @@
 package process
 
 import (
+	"net/url"
 	"regexp"
 	"strings"
 	"sync"
@@ -14,10 +15,15 @@ func parse(site *data.Site, referrer, content string, gatheredUrls *sync.Map) []
 	urls := []data.Link{}
 	matches := hrefRegex.FindAllStringSubmatch(content, -1)
 	for _, m := range matches {
-		href := strings.Trim(m[2], " ")
+		u, err := url.Parse(m[2])
+		if err != nil {
+			continue
+		}
+		href := u.Path
 		add := (href != "" && strings.HasPrefix(href, "/") && !strings.HasPrefix(href, "//") && !strings.HasPrefix(href, "#") && !strings.HasPrefix(href, "mailto:") && !strings.HasPrefix(href, "javascript")) || strings.HasPrefix(href, site.Root)
 		if strings.HasPrefix(href, "/") {
-			href = site.Root + href
+			u = site.RootUrl.ResolveReference(u)
+			href = u.String()
 		}
 
 		_, contains := gatheredUrls.Load(href)

@@ -2,12 +2,19 @@ package data
 
 import (
 	"fmt"
+	"net/url"
 	"os"
 )
 
 func NewSite(root string, virtualPaths []string, headers Headers, urlFilename, errorFilename string) (*Site, error) {
 	site := new(Site)
 	site.Root = root
+	u, err := url.Parse(root)
+	if err != nil {
+		return nil, fmt.Errorf("parsing url %s. %w", root, err)
+	}
+
+	site.RootUrl = u
 	site.VirtualPaths = virtualPaths
 	site.Headers = headers
 
