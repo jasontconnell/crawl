@@ -20,6 +20,8 @@ func init() {
 
 func main() {
 	cfgfile := flag.String("c", "", "config file")
+	timeout := flag.Int("timeout", 15, "timeout")
+	retryLimit := flag.Int("retryLimit", 3, "retryLimit")
 	flag.Parse()
 
 	startTime := time.Now()
@@ -43,7 +45,7 @@ func main() {
 		hdr[k] = v
 	}
 
-	site, err := data.NewSite(cfg.Root, cfg.VirtualPaths, hdr, cfg.UrlsFile, cfg.ErrorsFile)
+	site, err := data.NewSite(cfg.Root, cfg.VirtualPaths, hdr, cfg.UrlsFile, cfg.ErrorsFile, *timeout, *retryLimit)
 	if err != nil {
 		log.Fatal("error initializing site", err)
 	}

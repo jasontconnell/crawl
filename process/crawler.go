@@ -16,8 +16,8 @@ func Start(site *data.Site) {
 
 	job := &data.Job{
 		Site:       site,
-		Urls:       make(chan data.Link, 1500000),
-		Retry:      make(chan data.Link, 150000),
+		Urls:       make(chan *data.Link, 1500000),
+		Retry:      make(chan *data.Link, 150000),
 		Content:    make(chan data.ContentResponse, 300),
 		Gathered:   &gatheredUrls,
 		Finished:   make(chan bool),
@@ -25,7 +25,7 @@ func Start(site *data.Site) {
 	}
 
 	for _, url := range urls {
-		job.Urls <- data.Link{Url: url, Referrer: site.Root}
+		job.Urls <- &data.Link{Url: url, Referrer: site.Root}
 	}
 
 	crawl(job)
@@ -72,6 +72,7 @@ func getContent(job *data.Job) {
 			doGetUrl(job, url)
 		case url := <-job.Retry:
 			time.Sleep(2 * time.Second)
+			url.RetryCount++
 			doGetUrl(job, url)
 		}
 
@@ -79,13 +80,17 @@ func getContent(job *data.Job) {
 	}
 }
 
-func doGetUrl(job *data.Job, url data.Link) {
-	ch, err := getUrlContents(job.Site, url)
-	if err != nil {
+func doGetUrl(job *data.Job, url *data.Link) {
+	ch, err := getUrlContents(job.Site, *url)
+	if err != nil && !errors.Is(err, TimeoutError) {
 		job.ErrorCount++
 	}
+
 	if errors.Is(err, TimeoutError) {
-		job.Retry <- url
+		if url.RetryCount < job.Site.RetryLimit {
+			job.Retry <- url
+		}
+
 	}
 
 	job.Content <- ch
@@ -100,11 +105,15 @@ func getLinks(job *data.Job) {
 			if cresp.Code == 200 {
 				hrefs := parse(job.Site, cresp.Link.Url, cresp.Content, job.Gathered)
 				for _, href := range hrefs {
-					job.Urls <- href
+					job.Urls <- &href
 					job.Site.WriteUrl(href.Url, href.Referrer)
 				}
 			} else if cresp.Code >= 400 {
-				job.Site.WriteError(cresp.Link.Url, cresp.Link.Referrer, cresp.Code, "400ish error")
+				msg := "~400 error"
+				if cresp.Code >= 500 {
+					msg = "~500 error"
+				}
+				job.Site.WriteError(cresp.Link.Url, cresp.Link.Referrer, cresp.Code, msg)
 				job.ErrorCount++
 			}
 

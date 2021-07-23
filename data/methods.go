@@ -6,9 +6,11 @@ import (
 	"os"
 )
 
-func NewSite(root string, virtualPaths []string, headers Headers, urlFilename, errorFilename string) (*Site, error) {
+func NewSite(root string, virtualPaths []string, headers Headers, urlFilename, errorFilename string, timeout, retryLimit int) (*Site, error) {
 	site := new(Site)
 	site.Root = root
+	site.Timeout = timeout
+	site.RetryLimit = retryLimit
 	u, err := url.Parse(root)
 	if err != nil {
 		return nil, fmt.Errorf("parsing url %s. %w", root, err)

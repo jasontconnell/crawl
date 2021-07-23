@@ -7,7 +7,6 @@ import (
 	"net"
 	"net/http"
 	"net/url"
-	"strings"
 	"time"
 
 	"github.com/jasontconnell/crawl/data"
@@ -30,18 +29,18 @@ func getUrlContents(site *data.Site, link data.Link) (data.ContentResponse, erro
 	req := &http.Request{Method: "GET", URL: uri, Header: headers}
 	client := &http.Client{
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
-			if strings.Contains(site.Root, req.URL.Hostname()) {
+			if site.RootUrl.Hostname() == req.URL.Hostname() {
 				return nil
 			}
 			return http.ErrUseLastResponse
 		},
-		Timeout: time.Duration(time.Second * 5),
+		Timeout: time.Duration(time.Second * time.Duration(site.Timeout)),
 	}
 
 	resp, err := client.Do(req)
 	if err != nil {
 		if toerr, ok := err.(net.Error); ok && toerr.Timeout() {
-			site.WriteError(link.Url, link.Referrer, -1, "timed out")
+			// site.WriteError(link.Url, link.Referrer, -1, "timed out")
 			return cresp, TimeoutError
 		}
 

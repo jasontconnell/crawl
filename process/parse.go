@@ -3,7 +3,6 @@ package process
 import (
 	"net/url"
 	"regexp"
-	"strings"
 	"sync"
 
 	"github.com/jasontconnell/crawl/data"
@@ -19,22 +18,25 @@ func parse(site *data.Site, referrer, content string, gatheredUrls *sync.Map) []
 		if err != nil {
 			continue
 		}
-		href := u.Path
-		add := (href != "" && strings.HasPrefix(href, "/") && !strings.HasPrefix(href, "//") && !strings.HasPrefix(href, "#") && !strings.HasPrefix(href, "mailto:") && !strings.HasPrefix(href, "javascript")) || strings.HasPrefix(href, site.Root)
-		if strings.HasPrefix(href, "/") {
-			u = site.RootUrl.ResolveReference(u)
-			href = u.String()
+
+		add := !u.IsAbs() || u.Hostname() == site.RootUrl.Hostname() // && !strings.HasPrefix(href, "//") && !strings.HasPrefix(href, "#") && !strings.HasPrefix(href, "mailto:") && !strings.HasPrefix(href, "javascript"))
+		if !add {
+			continue
 		}
 
-		_, contains := gatheredUrls.Load(href)
-		_, contains2 := gatheredUrls.Load(href + "/")
-		_, contains3 := gatheredUrls.Load(strings.TrimSuffix(href, "/"))
-		contains = contains || contains2 || contains3
+		if !u.IsAbs() {
+			u = site.RootUrl.ResolveReference(u)
+		}
+
+		_, contains := gatheredUrls.Load(u.String())
+		// _, contains2 := gatheredUrls.Load(href + "/")
+		// _, contains3 := gatheredUrls.Load(strings.TrimSuffix(href, "/"))
+		// contains = contains || contains2 || contains3
 
 		if !contains {
-			gatheredUrls.Store(href, href)
+			gatheredUrls.Store(u.String(), u.String())
 			if add {
-				urls = append(urls, data.Link{Referrer: referrer, Url: href})
+				urls = append(urls, data.Link{Referrer: referrer, Url: u.String()})
 			}
 		}
 	}

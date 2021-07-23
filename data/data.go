@@ -13,13 +13,16 @@ type Site struct {
 	RootUrl      *url.URL
 	VirtualPaths []string
 	Headers      Headers
+	Timeout      int
+	RetryLimit   int
 	errorFile    *os.File
 	urlsFile     *os.File
 }
 
 type Link struct {
-	Referrer string
-	Url      string
+	Referrer   string
+	Url        string
+	RetryCount int
 }
 
 type ContentResponse struct {
@@ -31,8 +34,8 @@ type ContentResponse struct {
 
 type Job struct {
 	Site       *Site
-	Urls       chan Link
-	Retry      chan Link
+	Urls       chan *Link
+	Retry      chan *Link
 	Content    chan ContentResponse
 	Processed  int
 	Finished   chan bool
