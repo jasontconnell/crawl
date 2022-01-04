@@ -3,6 +3,7 @@ package process
 import (
 	"net/url"
 	"regexp"
+	"strings"
 	"sync"
 
 	"github.com/jasontconnell/crawl/data"
@@ -19,7 +20,7 @@ func parse(site *data.Site, referrer, content string, gatheredUrls *sync.Map) []
 			continue
 		}
 
-		add := !u.IsAbs() || u.Hostname() == site.RootUrl.Hostname() // && !strings.HasPrefix(href, "//") && !strings.HasPrefix(href, "#") && !strings.HasPrefix(href, "mailto:") && !strings.HasPrefix(href, "javascript"))
+		add := (!u.IsAbs() || u.Hostname() == site.RootUrl.Hostname()) && !strings.HasPrefix(u.String(), "#")
 		if !add {
 			continue
 		}

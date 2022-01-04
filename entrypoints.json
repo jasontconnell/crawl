@@ -1,7 +1,12 @@
 {
-    "root": "http://www.jasontconnell.com/",
-    "virtualPaths": [],
-    "headers": {},
+    "root": "https://www.barings.com/",
+    "sitemap": "sitemap.xml",
+    "virtualPaths": [
+        "/us/guest"
+    ],
+    "headers": {
+        
+    },
     "errorsFile": "errors.txt",
     "urlsFile": "urls.txt"
 }

@@ -10,6 +10,7 @@ type Config struct {
 	ErrorsFile   string   `json:"errorsFile"`
 	UrlsFile     string   `json:"urlsFile"`
 	Headers      Headers  `json:"headers"`
+	Sitemap      string   `json:"sitemap"`
 }
 
 type Headers map[string]string

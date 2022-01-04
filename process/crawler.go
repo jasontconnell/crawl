@@ -3,6 +3,7 @@ package process
 import (
 	"errors"
 	"fmt"
+	"log"
 	"runtime"
 	"sync"
 	"time"
@@ -25,7 +26,7 @@ func Start(site *data.Site) {
 	}
 
 	for _, url := range urls {
-		job.Urls <- &data.Link{Url: url, Referrer: site.Root}
+		job.Urls <- &url
 	}
 
 	crawl(job)
@@ -48,11 +49,18 @@ func crawl(job *data.Job) {
 	}
 }
 
-func getStartUrlList(site *data.Site) []string {
-	list := []string{}
-	list = append(list, site.Root)
+func getStartUrlList(site *data.Site) []data.Link {
+	list := []data.Link{}
+	list = append(list, data.Link{Url: site.Root})
 	for _, i := range site.VirtualPaths {
-		list = append(list, site.Root+i)
+		list = append(list, data.Link{Url: site.Root + i})
+	}
+	if site.Sitemap != "" {
+		sitemapUrls, err := ReadSitemap(site.Root, site.Sitemap)
+		if err != nil {
+			log.Fatal("couldn't read sitemap. ", err)
+		}
+		list = append(list, sitemapUrls...)
 	}
 	return list
 }

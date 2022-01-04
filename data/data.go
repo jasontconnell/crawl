@@ -11,6 +11,7 @@ type Headers map[string]string
 type Site struct {
 	Root         string
 	RootUrl      *url.URL
+	Sitemap      string
 	VirtualPaths []string
 	Headers      Headers
 	Timeout      int
