@@ -7,6 +7,7 @@ import (
 type Config struct {
 	Root         string   `json:"root"`
 	VirtualPaths []string `json:"virtualPaths"`
+	ReplaceRoots []string `json:"replaceRoots"`
 	ErrorsFile   string   `json:"errorsFile"`
 	UrlsFile     string   `json:"urlsFile"`
 	Headers      Headers  `json:"headers"`

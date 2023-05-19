@@ -7,6 +7,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/jasontconnell/crawl/data"
@@ -17,6 +18,7 @@ var TimeoutError error = errors.New("timeout")
 func getUrlContents(site *data.Site, link data.Link) (data.ContentResponse, error) {
 	cresp := data.ContentResponse{}
 	uri, err := url.Parse(link.Url)
+
 	if err != nil {
 		return cresp, fmt.Errorf("parsing %s. %w", link.Url, err)
 	}
@@ -55,6 +57,9 @@ func getUrlContents(site *data.Site, link data.Link) (data.ContentResponse, erro
 	}
 
 	cresp.Content = string(contents)
+	for _, rep := range site.ReplaceRoots {
+		cresp.Content = strings.Replace(cresp.Content, rep, "", -1)
+	}
 	cresp.Link = link
 	cresp.Code = resp.StatusCode
 

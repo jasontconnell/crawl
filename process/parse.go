@@ -1,6 +1,7 @@
 package process
 
 import (
+	"fmt"
 	"net/url"
 	"regexp"
 	"strings"
@@ -20,7 +21,7 @@ func parse(site *data.Site, referrer, content string, gatheredUrls *sync.Map) []
 			continue
 		}
 
-		add := (!u.IsAbs() || u.Hostname() == site.RootUrl.Hostname()) && !strings.HasPrefix(u.String(), "#")
+		add := (!u.IsAbs() || u.Hostname() == site.RootUrl.Hostname()) && !strings.HasPrefix(u.String(), "#") && !strings.Contains(u.String(), ".js")
 		if !add {
 			continue
 		}
@@ -35,6 +36,10 @@ func parse(site *data.Site, referrer, content string, gatheredUrls *sync.Map) []
 		// contains = contains || contains2 || contains3
 
 		if !contains {
+			if strings.Contains(u.String(), "statistics") {
+				fmt.Println(u.String())
+			}
+
 			gatheredUrls.Store(u.String(), u.String())
 			if add {
 				urls = append(urls, data.Link{Referrer: referrer, Url: u.String()})

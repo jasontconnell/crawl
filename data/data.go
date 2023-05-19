@@ -13,6 +13,7 @@ type Site struct {
 	RootUrl      *url.URL
 	Sitemap      string
 	VirtualPaths []string
+	ReplaceRoots []string
 	Headers      Headers
 	Timeout      int
 	RetryLimit   int

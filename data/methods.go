@@ -6,7 +6,7 @@ import (
 	"os"
 )
 
-func NewSite(root string, virtualPaths []string, sitemap string, headers Headers, urlFilename, errorFilename string, timeout, retryLimit int) (*Site, error) {
+func NewSite(root string, virtualPaths []string, replaceRoots []string, sitemap string, headers Headers, urlFilename, errorFilename string, timeout, retryLimit int) (*Site, error) {
 	site := new(Site)
 	site.Root = root
 	site.Timeout = timeout
@@ -20,6 +20,7 @@ func NewSite(root string, virtualPaths []string, sitemap string, headers Headers
 	site.RootUrl = u
 	site.VirtualPaths = virtualPaths
 	site.Headers = headers
+	site.ReplaceRoots = replaceRoots
 
 	ef, err := os.OpenFile(errorFilename, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, os.ModePerm)
 	if err != nil {

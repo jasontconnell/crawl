@@ -26,6 +26,7 @@ func Start(site *data.Site) {
 	}
 
 	for _, url := range urls {
+		site.WriteUrl(url.Url, url.Referrer)
 		job.Urls <- &url
 	}
 
@@ -82,6 +83,8 @@ func getContent(job *data.Job) {
 			time.Sleep(2 * time.Second)
 			url.RetryCount++
 			doGetUrl(job, url)
+		case <-job.Finished:
+			break
 		}
 
 		printStatus(job)
@@ -126,7 +129,6 @@ func getLinks(job *data.Job) {
 			}
 
 			printStatus(job)
-			checkDone(job)
 		}
 	}
 }

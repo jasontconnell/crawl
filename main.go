@@ -47,7 +47,7 @@ func main() {
 
 	process.ReadSitemap(cfg.Root, cfg.Sitemap)
 
-	site, err := data.NewSite(cfg.Root, cfg.VirtualPaths, cfg.Sitemap, hdr, cfg.UrlsFile, cfg.ErrorsFile, *timeout, *retryLimit)
+	site, err := data.NewSite(cfg.Root, cfg.VirtualPaths, cfg.ReplaceRoots, cfg.Sitemap, hdr, cfg.UrlsFile, cfg.ErrorsFile, *timeout, *retryLimit)
 	if err != nil {
 		log.Fatal("error initializing site", err)
 	}
